@@ -1,0 +1,135 @@
+package com.example;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserController
+{
+    public List<UserDetails> userDetailsList = new ArrayList<UserDetails>();
+    
+    public UserController()
+    {
+    	
+    }
+    @RequestMapping(value="/userdetails",method=RequestMethod.GET,produces="application/json")
+    public List<UserDetails> GetUserdetails()
+    {
+        userDetailsList.clear();
+    	try{  
+    		Class.forName("com.mysql.jdbc.Driver").newInstance();  
+    		  
+    		Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/sample1","root","");  
+
+    		Statement stmt=con.createStatement();  
+    		ResultSet rs=stmt.executeQuery("select * from sample1.details");  
+    		while(rs.next())
+    		{
+    			userDetailsList.add(new UserDetails(rs.getString(1), rs.getString(2)));
+    			
+    			
+    		}
+    		
+    		con.close();  
+    		}catch(Exception e){ System.out.println(e);}  
+    		
+    	
+        return userDetailsList;
+    }
+    
+    @RequestMapping(value="/user",consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.POST)
+    public List<UserDetails> ProcessUser(@RequestBody UserDetails userDetails)
+    {
+    	
+    	try{  
+    		Class.forName("com.mysql.jdbc.Driver");  
+  		  
+    		Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/sample1","root","");  
+
+    		PreparedStatement stmt=con.prepareStatement("insert into sample1.details values(?,?)");  
+    		stmt.setString(1,userDetails.getName());
+    		stmt.setString(2,userDetails.getDepartment());  
+    		int i=stmt.executeUpdate();  
+    		System.out.println(i+" records inserted");   
+    		con.close();  
+    		  
+    		}catch(Exception e){ System.out.println(e);}  
+
+    	
+    	boolean nameExist = false;
+        
+        for(UserDetails ud : userDetailsList)
+        {
+            if(ud.getName().equals(userDetails.getName()))
+            {
+                nameExist = true;
+                ud.setDepartment(userDetails.getDepartment());
+                break;
+            }
+        }
+        if(!nameExist)
+        {
+            userDetailsList.add(userDetails);
+        }
+        
+        return userDetailsList;
+    }
+    	
+     
+    
+    @RequestMapping(value="/deleteuser",consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.DELETE)
+    public ResponseEntity DeleteUser(@RequestBody UserDetails userDetails)
+    {
+    	try{  
+    		Class.forName("com.mysql.jdbc.Driver");  
+  		  
+    		Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/sample1","root","");  
+
+    		PreparedStatement stmt=con.prepareStatement("delete from sample1.details where name=?");  
+    		stmt.setString(1,userDetails.getName());
+    		int i=stmt.executeUpdate();  
+    		System.out.println(i+" records deleted");   
+    		con.close();  
+    		  
+    		}catch(Exception e){ System.out.println(e);}  
+    	
+        return new ResponseEntity(HttpStatus.OK);
+    }
+
+    @RequestMapping(value="/updateuser",consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.PUT)
+    public List<UserDetails> updateUser(@RequestBody UserDetails userDetails)
+    {
+    	try{  
+    		Class.forName("com.mysql.jdbc.Driver");  
+  		  
+    		Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/sample1","root","");  
+        String sql="update sample1.details set department=? where name=?";
+    		PreparedStatement stmt=con.prepareStatement(sql);  
+    		stmt.setString(1,userDetails.getDepartment());
+	        stmt.setString(2,userDetails.getName());
+    		int i=stmt.executeUpdate();  
+    		
+    		System.out.println(i+" records updated");   
+    		con.close();  
+    		  
+    		}catch(Exception e){ System.out.println(e);}  
+
+    	
+    	
+         return userDetailsList;
+    }
+}
